@@ -31,6 +31,8 @@ Axilrod-Teller-Muto dispersion term.
     \dfrac{1}{1+ 6 \left(\overline{R}_\text{ABC}\right)^{-16}}
 """
 
+from __future__ import annotations
+
 import torch
 from tad_mctc import storch
 from tad_mctc.batch import real_pairs, real_triples
@@ -47,9 +49,9 @@ def dispersion_atm(
     c6: Tensor,
     rvdw: Tensor,
     cutoff: Tensor,
-    s9: Tensor = torch.tensor(defaults.S9),
-    rs9: Tensor = torch.tensor(defaults.RS9),
-    alp: Tensor = torch.tensor(defaults.ALP),
+    s9: Tensor | None = None,
+    rs9: Tensor | None = None,
+    alp: Tensor | None = None,
 ) -> Tensor:
     """
     Axilrod-Teller-Muto dispersion term.
@@ -80,9 +82,21 @@ def dispersion_atm(
     """
     dd: DD = {"device": positions.device, "dtype": positions.dtype}
 
-    s9 = s9.type(positions.dtype).to(positions.device)
-    rs9 = rs9.type(positions.dtype).to(positions.device)
-    alp = alp.type(positions.dtype).to(positions.device)
+    s9 = (
+        torch.tensor(defaults.S9, **dd)
+        if s9 is None
+        else s9.type(positions.dtype).to(positions.device)
+    )
+    rs9 = (
+        torch.tensor(defaults.RS9, **dd)
+        if rs9 is None
+        else rs9.type(positions.dtype).to(positions.device)
+    )
+    alp = (
+        torch.tensor(defaults.ALP, **dd)
+        if alp is None
+        else alp.type(positions.dtype).to(positions.device)
+    )
 
     cutoff2 = cutoff * cutoff
     srvdw = rs9 * rvdw
@@ -146,7 +160,7 @@ def dispersion_atm(
     ang = torch.where(
         mask_triples
         * (r2ij <= cutoff2)
-        * (r2jk <= cutoff2)
+        * (r2ik <= cutoff2)
         * (r2jk <= cutoff2),
         0.375 * s / r5 + 1.0 / r3,
         torch.tensor(0.0, **dd),
